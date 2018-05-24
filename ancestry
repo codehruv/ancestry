@@ -69,7 +69,7 @@ if [ $option = "1" ]; then
 
     echo "African Non-African" > ancestry.txt
 
-    Rscript plotBinary.R 1>>error.log
+    Rscript plots/plotBinary.R 1>>error.log
     
     echo
     echo Correlations are given below for and against
@@ -89,7 +89,7 @@ else
 
     ./admixture final1.bed 3 >> run.log 2>>error.log
 
-    Rscript plot.R 1>>error.log
+    Rscript plots/plot.R 1>>error.log
 
     echo
     echo Correlations are given below

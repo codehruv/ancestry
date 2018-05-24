@@ -1,6 +1,6 @@
 # ancestry
 
-The reference panel files are being uploaded right now
+Reference panel can be found [here](https://www.dropbox.com/s/w61czv0zd0x3jlk/reference_panel.zip?dl=0).
 
 ## Instructions
 

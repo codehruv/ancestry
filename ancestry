@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# Find the vcf/ped file and convert it to bed format
+
+echo Finding and processing input file...
+
+input="$(ls | egrep -e ".vcf|.vcf.gz|.ped")"
+
+echo $input
+if [[ "$input" == *ped ]] 
+then
+    ./plink --file $input --make-bed --out sample > run.log 2>error.log
+elif [[ "$input" == *vcf ]]
+then
+    ./plink --vcf $input --make-bed --out sample > run.log 2>error.log
+elif [[ "$input" == *gz ]]
+then
+    ./plink --vcf $input --make-bed --out sample > run.log 2>error.log
+else
+    echo No vcf/ped file found in the current directory
+    exit 1
+fi
+
+# Take the sample.bed file and extract 10000 SNPs 
+
+# Since I am only considering Continental Ancestry, 10k genes are enough. For intercontinental, 100k would be needed.
+# Right now, implementing intercontinental would mean merging more populations to the hapmap and setting a larger K.
+
+awk "{print $2}" sample.bim > temp_snplist.txt
+head -10000 temp_snplist.txt > snplist.txt
+
+echo
+echo
+echo Binary Ancestry Option is 1 
+echo Continental Ancestry Option is 2
+echo
+echo Which ancestry do you want to check
+
+read option
+
+./plink --bfile sample --extract snplist.txt --make-bed --out sample10k >> run.log 2>>error.log
+
+if [ $option = "1" ]; then
+
+    # Take the corresponding SNPs from the sample in the hapmap files
+
+    ./plink --bfile yri --extract snplist.txt --make-bed --out hapmap10k >> run.log 2>>error.log
+
+    # Merging the two leads to multiple variants error for some SNPs, this step removes those SNPs from the calculation
+
+    ./plink --bfile sample10k --bmerge hapmap10k --make-bed --out final_temp >> run.log 2>>error.log
+    ./plink --bfile sample10k --exclude final_temp-merge.missnp --make-bed --out sample_final >> run.log 2>>error.log
+
+    # Final merge
+
+    ./plink --bfile sample_final --bmerge hapmap10k --make-bed --out final >> run.log 2>>error.log
+
+    # Remove all loci with missing SNPs
+
+    ./plink --bfile final --geno 0.5 --make-bed --out final1 >> run.log 2>>error.log
+
+    # Run admixture on the final bed
+    # K=2 for binary checking
+
+    ./admixture final1.bed 2 >> run.log 2>>error.log
+    
+    # Merging the sample with hapmap might scramble its position.
+    # Find which row in the final Q file corresponds to the sample
+
+    echo "African Non-African" > ancestry.txt
+
+    Rscript plotBinary.R 1>>error.log
+    
+    echo
+    echo Correlations are given below for and against
+    echo Judging by the plot, estimate which one is African% and which is the non%
+else
+    ./plink --bfile hapmap --extract snplist.txt --make-bed --out hapmap10k >> run.log 2>>error.log
+
+    ./plink --bfile sample10k --bmerge hapmap10k --make-bed --out final_temp >> run.log 2>>error.log
+    ./plink --bfile sample10k --exclude final_temp-merge.missnp --make-bed --out sample_final >> run.log 2>>error.log
+
+    ./plink --bfile sample_final --bmerge hapmap10k --make-bed --out final >> run.log 2>>error.log
+
+
+    ./plink --bfile final --geno 0.5 --make-bed --out final1 >> run.log 2>>error.log
+
+    # K=3 for the continental populations
+
+    ./admixture final1.bed 3 >> run.log 2>>error.log
+
+    Rscript plot.R 1>>error.log
+
+    echo
+    echo Correlations are given below
+    echo Judging by the plot, decide which is European/CEU, African/YRI, Asian/HCBJPT
+fi
+
+echo
+cat ancestry.txt
+rm -f temp_snplist.txt snplist.txt 
+rm -f sample10k.bed sample10k.bim sample10k.fam sample10k.log sample10k.nosex 
+rm -f hapmap10k.bed hapmap10k.bim hapmap10k.fam hapmap10k.log hapmap10k.nosex
+rm -f final_temp.bed final_temp.bim final_temp.fam
+rm -f sample_final.bed sample_final.bim sample_final.fam sample_final.log sample_final.nosex
+rm -f final1.bed final1.bim final1.fam final1.log final1.nosex
+rm -f final.bed final.bim final.fam final.log final.nosex
+rm -f *.P *.Q
+rm -f final_temp*
+rm -f sample.bed sample.bim sample.fam sample.log sample.nosex

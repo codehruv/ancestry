@@ -9,7 +9,8 @@ input="$(ls | egrep -e ".vcf|.vcf.gz|.ped")"
 echo $input
 if [[ "$input" == *ped ]] 
 then
-    ./plink --file $input --make-bed --out sample > run.log 2>error.log
+    filename="$(echo $input | cut -d. -f1)"
+    ./plink --file $filename --make-bed --out sample > run.log 2>error.log
 elif [[ "$input" == *vcf ]]
 then
     ./plink --vcf $input --make-bed --out sample > run.log 2>error.log

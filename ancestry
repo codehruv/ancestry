@@ -57,7 +57,7 @@ if [ $option = "1" ]; then
 
     # Remove all loci with missing SNPs
 
-    ./plink --bfile final --geno 0.5 --make-bed --out final1 >> run.log 2>>error.log
+    ./plink --bfile final --geno 0.999 --make-bed --out final1 >> run.log 2>>error.log
 
     # Run admixture on the final bed
     # K=2 for binary checking
@@ -83,11 +83,11 @@ else
     ./plink --bfile sample_final --bmerge hapmap10k --make-bed --out final >> run.log 2>>error.log
 
 
-    ./plink --bfile final --geno 0.5 --make-bed --out final1 >> run.log 2>>error.log
+    ./plink --bfile final --geno 0.999 --make-bed --out final1 >> run.log 2>>error.log
 
     # K=3 for the continental populations
 
-    ./admixture final1.bed 3 >> run.log 2>>error.log
+    ./admixture --supervised final1.bed 3 >> run.log 2>>error.log
 
     Rscript plots/plot.R 1>>error.log
 

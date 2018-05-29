@@ -1,6 +1,12 @@
 #!/bin/bash
 
-# Find the vcf/ped file and convert it to bed format
+###
+#      STEP 1
+#
+# Find the input vcf/ped file and convert it to me.ped
+#
+# Idea: Standardizing filename and file type for later processing in the pipeline
+###
 
 echo Finding and processing input file...
 
@@ -11,10 +17,7 @@ if [[ "$input" == *ped ]]
 then
     filename="$(echo $input | cut -f1 -d.)" 
     ./plink --file $filename --recode --out me > run.log
-elif [[ "$input" == *vcf ]]
-then
-    ./plink --vcf $input --maf 0.05 --recode --out me > run.log 2>error.log
-elif [[ "$input" == *gz ]]
+elif [ "$input" == *vcf ] || [ "$input" == *gz ] ;
 then
     ./plink --vcf $input --maf 0.05 --recode --out me > run.log 2>error.log
 else
@@ -22,7 +25,12 @@ else
     exit 1
 fi
 
-# Take the me.ped file 
+
+###
+#      STEP 2
+# Accept binary/multiple workflow pipeline
+#
+###
 
 echo
 echo
@@ -33,28 +41,41 @@ echo Which ancestry do you want to check
 
 read option
 
+
+####
+#       STEP 3
+#  - merge individual's genotype to reference panel
+#  - run admixture on merged bed with corresponding merged pop file
+#  - the generated Q file is analyzed by R script which generates the final ancestry results
+####
+
 if [ $option = "1" ]; then
     
-    ./plink --noweb --bfile reference_panel/yri --merge me.ped me.map --make-bed --out merge
+    ./plink --noweb --bfile reference_panel/yri --merge me --make-bed --out binary_merge1 >> run.log 2>>error.log
 
-    # Run admixture on the final bed
-    # K=2 for binary checking
 
-    ./admixture merge.bed 2 >> run.log 2>>error.log
+    if [ ! -f binary_merge1.bed ]; # If the merge was unsuccessful
+    then
+        echo Yo
+        ./plink --file me --exclude binary_merge1-temp.missnp --make-bed --out me_temp >> run.log 2>>error.log
+        ./plink --bfile reference_panel/yri --bmerge me_temp --make-bed --out binary_merge1 >> run.log 2>>error.log
+    fi
+
+    ./plink --bfile binary_merge1 --geno 0.999 --make-bed --out binary_merge >> run.log 2>>error.log
+
+    ./admixture -j5 --supervised binary_merge.bed 2 >> run.log 2>>error.log
    
-    # Merging the sample with hapmap might scramble its position.
-    # Find which row in the final Q file corresponds to the sample
-
     Rscript plots/plotBinary.R 1>>error.log
     
     echo
     echo Correlations are given below for and against
 else
-    ./plink --noweb --bfile reference_panel/PAP --merge me.ped me.map --make-bed --out merge1 >> run.log 2>>error.log
+    ./plink --noweb --bfile reference_panel/PAP --merge me --make-bed --out merge1 >> run.log 2>>error.log
     
     ./plink --bfile merge1 -geno 0.999 --make-bed --out merge >> run.log 2>>error.log
 
     ./admixture -j5 --supervised merge.bed 9 >> run.log 2>>error.log >> run.log 2>>error.log
+    
     Rscript plots/plot.R 1>>error.log
 
     echo

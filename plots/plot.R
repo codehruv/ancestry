@@ -1,4 +1,4 @@
-tbl <- read.table("merge.9.Q")
+tbl <- read.table("final1.9.Q")
 
 sampleRow <- 1
 

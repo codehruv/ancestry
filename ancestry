@@ -95,6 +95,7 @@ else
                 then
                     echo "Check error.log for unforeseen errors"
                     exit 1
+                fi
             fi
         fi
     fi

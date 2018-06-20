@@ -72,24 +72,24 @@ if [ $option = "1" ]; then
     echo Correlations are given below for and against
 else
     
-    ./plink --noweb --bfile reference_panel/hcbjpt --merge me --make-bed --out merge1 >> run.log 2>>error.log
+    ./plink --noweb --bfile reference_panel/finalHapmap --merge me --make-bed --out merge1 >> run.log 2>>error.log
 
     if [ ! -e merge1.bed ]
     then
         # biallelic error
         ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
-        ./plink --bfile reference_panel/hcbjpt --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
+        ./plink --bfile reference_panel/finalHapmap --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
         
         if [ ! -e merge1.bed ]
         then 
             # merge missnp error
             ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
-            ./plink --bfile reference_panel/hcbjpt --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+            ./plink --bfile reference_panel/finalHapmap --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
             
             if [ ! -e merge1.bed ]
             then
-                ./plink --bfile reference_panel/hcbjpt --exclude merge1-merge.missnp --make-bed --out reference_panel/hcbjpt_temp >>run.log 2>>error.log
-                ./plink --bfile reference_panel/hcbjpt_temp --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+                ./plink --bfile reference_panel/finalHapmap --exclude merge1-merge.missnp --make-bed --out reference_panel/finalHapmap_temp >>run.log 2>>error.log
+                ./plink --bfile reference_panel/finalHapmap_temp --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
 
                 if [ ! -e merge1.bed ]
                 then
@@ -100,11 +100,18 @@ else
         fi
     fi
         
-    ./plink --bfile merge1 -geno 0.999 --make-bed --out merge >> run.log 2>>error.log
+    ./plink --bfile merge1 -geno 0.999999 --make-bed --out merge >> run.log 2>>error.log
     
-    awk '{print $1}' merge.fam > merge.pop
+    awk '{print $1}' merge.fam > merge1.pop
+    awk '{ if( $1=="FAM001" ) $1=" "; print $1; }' merge1.pop > merge.pop
 
-    ./admixture -j5 merge.bed 5 >> run.log 2>>error.log >> run.log 2>>error.log
+    # In case some populations don't make it through the merge step, we can't ensure that
+    # there will be the same number of populations as in the original hapmap
+    pops="$(cat merge.pop | sort | uniq | wc -l)"
+    
+    let pop=pops-1
+
+    ./admixture -j5 --supervised merge.bed $pop >> run.log 2>>error.log >> run.log 2>>error.log
     
     Rscript plots/plot.R 1>>error.log
 

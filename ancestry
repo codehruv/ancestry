@@ -53,12 +53,13 @@ if [ $option = "1" ]; then
     
     ./plink --noweb --bfile reference_panel/yri --merge me --make-bed --out binary_merge1 >> run.log 2>>error.log
 
-
-    if [ ! -f binary_merge1.bed ]; # If the merge was unsuccessful
-    then
+    if [ -f binary_merge1-temp.missnp ]; then
         echo Yo
         ./plink --file me --exclude binary_merge1-temp.missnp --make-bed --out me_temp >> run.log 2>>error.log
         ./plink --bfile reference_panel/yri --bmerge me_temp --make-bed --out binary_merge1 >> run.log 2>>error.log
+    else 
+        ./plink --file me --make-bed --out individual >> run.log 2>>error.log
+        ./plink --file individual --merge reference_panel/yri --make-bed --out binary_merge1 >> run.log 2>>error.log
     fi
 
     ./plink --bfile binary_merge1 --geno 0.999 --make-bed --out binary_merge >> run.log 2>>error.log
@@ -70,11 +71,35 @@ if [ $option = "1" ]; then
     echo
     echo Correlations are given below for and against
 else
-    ./plink --noweb --bfile reference_panel/PAP --merge me --make-bed --out merge1 >> run.log 2>>error.log
     
-    ./plink --bfile merge1 -geno 0.999 --make-bed --out merge >> run.log 2>>error.log
+    ./plink --noweb --bfile reference_panel/SouthAsian1G --merge me --make-bed --out merge1 >> run.log 2>>error.log
 
-    ./admixture -j5 --supervised merge.bed 9 >> run.log 2>>error.log >> run.log 2>>error.log
+    if [ ! -e merge1.bed ]
+    then
+        # biallelic error
+        ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
+        ./plink --bfile reference_panel/SouthAsian1G --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
+        
+        if [ ! -e merge1.bed ]
+        then 
+            # merge missnp error
+            ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
+            ./plink --bfile reference_panel/SouthAsian1G --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+            
+            if [ ! -e merge1.bed ]
+            then
+                # can't solve
+                echo "Check error.log for unforeseen error"
+                exit 1
+            fi
+        fi
+    fi
+        
+    ./plink --bfile merge1 -geno 0.999 --make-bed --out merge >> run.log 2>>error.log
+    
+    awk '{print $1}' merge.fam > merge.pop
+
+    ./admixture -j5 merge.bed 5 >> run.log 2>>error.log >> run.log 2>>error.log
     
     Rscript plots/plot.R 1>>error.log
 
@@ -84,5 +109,3 @@ fi
 
 echo
 cat ancestry.txt
-rm -f merge1.bed merge1.fam merge1.bim merge.bed merge.fam merge.bim
-rm -f me.ped me.map me.log

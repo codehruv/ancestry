@@ -72,25 +72,29 @@ if [ $option = "1" ]; then
     echo Correlations are given below for and against
 else
     
-    ./plink --noweb --bfile reference_panel/SouthAsian1G --merge me --make-bed --out merge1 >> run.log 2>>error.log
+    ./plink --noweb --bfile reference_panel/hcbjpt --merge me --make-bed --out merge1 >> run.log 2>>error.log
 
     if [ ! -e merge1.bed ]
     then
         # biallelic error
         ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
-        ./plink --bfile reference_panel/SouthAsian1G --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
+        ./plink --bfile reference_panel/hcbjpt --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
         
         if [ ! -e merge1.bed ]
         then 
             # merge missnp error
             ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
-            ./plink --bfile reference_panel/SouthAsian1G --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+            ./plink --bfile reference_panel/hcbjpt --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
             
             if [ ! -e merge1.bed ]
             then
-                # can't solve
-                echo "Check error.log for unforeseen error"
-                exit 1
+                ./plink --bfile reference_panel/hcbjpt --exclude merge1-merge.missnp --make-bed --out reference_panel/hcbjpt_temp >>run.log 2>>error.log
+                ./plink --bfile reference_panel/hcbjpt_temp --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+
+                if [ ! -e merge1.bed ]
+                then
+                    echo "Check error.log for unforeseen errors"
+                    exit 1
             fi
         fi
     fi

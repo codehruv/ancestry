@@ -113,11 +113,11 @@ else
 
     ./admixture -j5 --supervised merge.bed $pop >> run.log 2>>error.log >> run.log 2>>error.log
     
-    Rscript plots/plot.R 1>>error.log
+    output="$(ls | egrep -e "$pop.Q")"
 
+    Rscript plots/plot.R $output 1>>error.log
+    open ancestry.png
     echo
-    echo Correlations are given below
 fi
 
 echo
-cat ancestry.txt

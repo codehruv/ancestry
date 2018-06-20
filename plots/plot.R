@@ -1,10 +1,13 @@
-tbl <- read.table("final1.9.Q")
+args <- commandArgs(TRUE)
 
-sampleRow <- 1
+tbl <- read.table(args[1])
+finalFam <- read.csv("merge.fam", sep=" ", header=F)
+
+sampleRow <- which(grepl("FAM001", finalFam[,1]))
 
 cat(toString(tbl[sampleRow,]), file='ancestry.txt') 
 png(file="ancestry.png")
 slices <- as.numeric(tbl[sampleRow,])
-lbls <- c("Med", "Nat", "NEA", "NEU", "OCE", "RSA", "SEA", "SWA", "SSA")
+lbls <- c("East Asian", "European", "African")
 pie(slices, labels = lbls, main="Ancestry Chart")
 dev.off()

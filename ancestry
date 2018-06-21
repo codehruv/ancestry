@@ -16,10 +16,10 @@ echo $input
 if [[ "$input" == *ped ]] 
 then
     filename="$(echo $input | cut -f1 -d.)" 
-    ./plink --file $filename --recode --out me > run.log
+    ./plink --file $filename --recode --out me > run.log 2>error.log
 elif [ "$input" == *vcf ] || [ "$input" == *gz ] ;
 then
-    ./plink --vcf $input --maf 0.05 --recode --out me > run.log 2>error.log
+    ./plink --vcf $input --maf 0.05 --recode --out me > run.log 2>>error.log
 else
     echo No vcf/ped file found in the current directory
     exit 1
@@ -41,6 +41,9 @@ echo Which ancestry do you want to check
 
 read option
 
+echo 
+echo To view progress, run 'cat run.log' in the 
+echo same directory from a different terminal session
 
 ####
 #       STEP 3

@@ -1,0 +1,11 @@
+for filename in ~/Desktop/ancestry/ancestry/samples/*; do
+    ./plink --23file $filename --recode --out me
+
+    ./ancestry $1
+
+    echo Check output
+    read input
+    rm -f me*
+done
+
+

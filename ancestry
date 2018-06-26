@@ -8,6 +8,8 @@
 # Idea: Standardizing filename and file type for later processing in the pipeline
 ###
 
+REFPANEL=$1
+
 echo Finding and processing input file...
 
 input="$(ls | egrep -e ".vcf|.vcf.gz|.ped")"
@@ -39,7 +41,7 @@ echo Continental Ancestry Option is 2
 echo
 echo Which ancestry do you want to check
 
-read option
+$option=2
 
 echo 
 echo To view progress, run 'cat run.log' in the 
@@ -52,75 +54,59 @@ echo same directory from a different terminal session
 #  - the generated Q file is analyzed by R script which generates the final ancestry results
 ####
 
-if [ $option = "1" ]; then
+
+./plink --noweb --bfile reference_panel/$REFPANEL --merge me --make-bed --out merge1 >> run.log 2>>error.log
+
+if [ ! -e merge1.bed ]
+then
+    # biallelic error
+    ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
+    ./plink --bfile reference_panel/$REFPANEL --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
     
-    ./plink --noweb --bfile reference_panel/yri --merge me --make-bed --out binary_merge1 >> run.log 2>>error.log
-
-    if [ -f binary_merge1-temp.missnp ]; then
-        echo Yo
-        ./plink --file me --exclude binary_merge1-temp.missnp --make-bed --out me_temp >> run.log 2>>error.log
-        ./plink --bfile reference_panel/yri --bmerge me_temp --make-bed --out binary_merge1 >> run.log 2>>error.log
-    else 
-        ./plink --file me --make-bed --out individual >> run.log 2>>error.log
-        ./plink --file individual --merge reference_panel/yri --make-bed --out binary_merge1 >> run.log 2>>error.log
-    fi
-
-    ./plink --bfile binary_merge1 --geno 0.999 --make-bed --out binary_merge >> run.log 2>>error.log
-
-    ./admixture -j5 --supervised binary_merge.bed 2 >> run.log 2>>error.log
-   
-    Rscript plots/plotBinary.R 1>>error.log
-    
-    echo
-    echo Correlations are given below for and against
-else
-    
-    ./plink --noweb --bfile reference_panel/finalHapmap --merge me --make-bed --out merge1 >> run.log 2>>error.log
-
     if [ ! -e merge1.bed ]
-    then
-        # biallelic error
-        ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
-        ./plink --bfile reference_panel/finalHapmap --bmerge me_binary --make-bed --out merge1 >>run.log 2>>error.log
+    then 
+        # merge missnp error
+        ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
+        ./plink --bfile reference_panel/$REFPANEL --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
         
         if [ ! -e merge1.bed ]
-        then 
-            # merge missnp error
-            ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
-            ./plink --bfile reference_panel/finalHapmap --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
-            
+        then
+            ./plink --bfile reference_panel/$REFPANEL --exclude merge1-merge.missnp --make-bed --out reference_panel/$REFPANEL"_temp" >>run.log 2>>error.log
+            ./plink --bfile reference_panel/$REFPANEL"_temp" --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+
             if [ ! -e merge1.bed ]
             then
-                ./plink --bfile reference_panel/finalHapmap --exclude merge1-merge.missnp --make-bed --out reference_panel/finalHapmap_temp >>run.log 2>>error.log
-                ./plink --bfile reference_panel/finalHapmap_temp --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
-
-                if [ ! -e merge1.bed ]
-                then
-                    echo "Check error.log for unforeseen errors"
-                    exit 1
-                fi
+                echo "Check error.log for unforeseen errors"
+                exit 1
             fi
         fi
     fi
-        
-    ./plink --bfile merge1 -geno 0.999999 --make-bed --out merge >> run.log 2>>error.log
-    
-    awk '{print $1}' merge.fam > merge1.pop
-    awk '{ if( $1=="FAM001" ) $1=" "; print $1; }' merge1.pop > merge.pop
-
-    # In case some populations don't make it through the merge step, we can't ensure that
-    # there will be the same number of populations as in the original hapmap
-    pops="$(cat merge.pop | sort | uniq | wc -l)"
-    
-    let pop=pops-1
-
-    ./admixture -j5 --supervised merge.bed $pop >> run.log 2>>error.log >> run.log 2>>error.log
-    
-    output="$(ls | egrep -e "$pop.Q")"
-
-    Rscript plots/plot.R $output 1>>error.log
-    open ancestry.png
-    echo
 fi
+    
+
+./plink --bfile merge1 -geno 0.999 --make-bed --out merge
+
+awk '{print $1}' merge.fam > merge1.pop
+awk '{ if( $1=="FAM001" ) $1=" "; print $1; }' merge1.pop > merge.pop
+
+# In case some populations don't make it through the merge step, we can't ensure that
+# there will be the same number of populations as in the original hapmap
+pops="$(cat merge.pop | sort | uniq | wc -l)"
+
+let pop=pops-1
+
+./admixture -j5 --supervised merge.bed $pop >> run.log 2>>error.log >> run.log 2>>error.log
+
+output="$(ls | egrep -e "$pop.Q")"
+
+
+        Rscript plots/plot.R $output 1>>error.log
+        open ancestry.png
+    echo
+        #Rscript plots/plotBinary.R $output 1>>error.log
+        #open ancestry.png
+#fi
 
 echo
+
+rm -f reference_panel/$REFPANEL"_temp"*

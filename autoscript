@@ -1,5 +1,6 @@
 i=1
-for filename in ~/Desktop/ancestry/ancestry/$1/*; do
+j=$(pwd)
+for filename in $j/$1/*; do
 
     if [ -z "$3" ]
         then

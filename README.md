@@ -8,7 +8,7 @@ Here's the usage:
 
 There are samples already in the `samples/` folder or you could play with a few from www.opensnp.org
 
-As for reference panel, unzip `PHYLO.zip` from [this github repository by Razib Khan](https://github.com/razibkkhan/RazibKhanDataCode) and place those files in a newly created `reference_panel/`.
+As for reference panel, unzip `PHYLO.zip` from [this github repository by Razib Khan](https://github.com/razibkkhan/RazibKhanDataCode) and place those files in `reference_panel/`. ( If you want super continental ancestry, use the `PHYLO.fam` already in place. )
 
 I have provided a SNP set of ~9000 SNPs which gives accurate ancestries for large samples so far. The SNP set will be expanded to ~20000 soon.
 

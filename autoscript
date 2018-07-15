@@ -1,11 +1,22 @@
-for filename in ~/Desktop/ancestry/ancestry/samples/*; do
-    ./plink --23file $filename --recode --out me
+i=1
+for filename in ~/Desktop/ancestry/ancestry/$1/*; do
 
-    ./ancestry $1
+    if [ -z "$3" ]
+        then
+            ./plink --23file $filename --recode --out me
+            ./plink --bfile $2 --make-bed --out reference_panel/temp_panel
+    else
+            ./plink --23file $filename --extract $3 --recode --out me
+            ./plink --bfile $2 --extract $3 --make-bed --out reference_panel/temp_panel
+    fi
 
-    echo Check output
+    ./ancestry temp_panel
+    
+
+    open ancestry.png
+    i=$((i+1))
     read input
     rm -f me*
 done
 
-
+rm -f reference_panel/temp_panel*

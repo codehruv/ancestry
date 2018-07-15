@@ -1,17 +1,17 @@
 # ancestry
 
-Reference panel can be found [here](https://www.dropbox.com/s/4w33n61ol8amt3v/reference_panel.zip?dl=0).
+Here's the usage:
 
-## Instructions
+`./autoscript /path/to/samples /path/to/refpanel snp.set`
 
-1. Download and unzip the reference panel zip file
+### Files
 
-2. Place vcf/ped file in the same directory as `ancestry`
+There are samples already in the `samples/` folder or you could play with a few from www.opensnp.org
 
-3. Run `./ancestry /path/to/reference_panel.bed`
+As for reference panel, unzip `PHYLO.zip` from [this github repository by Razib Khan](https://github.com/razibkkhan/RazibKhanDataCode) and place those files in a newly created `reference_panel/`.
+
+I have provided a SNP set of ~9000 SNPs which gives accurate ancestries for large samples so far. The SNP set will be expanded to ~20000 soon.
 
 ## Usage
 
-The script produces a png and txt file with the ancestry percentages.
-
-You can load multiple 23andMe samples in the samples directory. The script will deliver the outputs for inspection after each one is done processing.
+After the script is done running on a file in `samples/` it will produce an ancestry png file which you could choose to save. Press enter after viewing the file for it to run on the next file in the folder.

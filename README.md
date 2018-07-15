@@ -12,6 +12,13 @@ As for reference panel, unzip `PHYLO.zip` from [this github repository by Razib 
 
 I have provided a SNP set of ~9000 SNPs which gives accurate ancestries for large samples so far. The SNP set will be expanded to ~20000 soon.
 
-## Usage
+### Usage
+
+`./autoscript samples reference_panel/PHYLO ancestry.snps`
+
+Use the `PHYLO.fam` in place for super population ancestry calculation. I have presented the way I mapped a subpopulation to a super population in the `pops2region.txt` file.
 
 After the script is done running on a file in `samples/` it will produce an ancestry png file which you could choose to save. Press enter after viewing the file for it to run on the next file in the folder.
+
+
+

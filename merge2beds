@@ -1,0 +1,8 @@
+file1=$1
+file2=$2
+
+awk '{print $2}' $1".bim" | sort > $1".snps"
+awk '{print $2}' $2".bim" | sort > $2".snps"
+comm -12 $1".snps" $2".snps" > $1$2".snps"
+
+./plink --bfile $1 --bmerge $2 --extract $1$2".snps" --geno 0.9 --make-bed --out $1$2

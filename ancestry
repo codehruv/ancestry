@@ -54,37 +54,35 @@ echo same directory from a different terminal session
 #  - the generated Q file is analyzed by R script which generates the final ancestry results
 ####
 
+# biallelic error
+./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
+awk '{print $2;}' me_binary.bim | sort > me_binary.snps
+awk '{print $2;}' reference_panel/$REFPANEL".bim" | sort > ref.snps
+comm -12 me_binary.snps ref.snps > merging.snps
 
-./plink --noweb --bfile reference_panel/$REFPANEL --merge me --make-bed --out merge1 >> run.log 2>>error.log
+./plink --bfile reference_panel/$REFPANEL --bmerge me_binary --extract merging.snps -make-bed --out merge1 >>run.log 2>>error.log
 
 if [ ! -e merge1.bed ]
-then
-    # biallelic error
-    ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
-    ./plink --bfile reference_panel/$REFPANEL --bmerge me_binary -make-bed --out merge1 >>run.log 2>>error.log
+then 
+    # merge missnp error
+    ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
+    ./plink --bfile reference_panel/$REFPANEL --bmerge me_final -make-bed --out merge1 >>run.log 2>>error.log
     
     if [ ! -e merge1.bed ]
-    then 
-        # merge missnp error
-        ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
-        ./plink --bfile reference_panel/$REFPANEL --bmerge me_final -make-bed --out merge1 >>run.log 2>>error.log
-        
+    then
+        ./plink --bfile reference_panel/$REFPANEL --exclude merge1-merge.missnp --make-bed --out reference_panel/$REFPANEL"_temp" >>run.log 2>>error.log
+        ./plink --bfile reference_panel/$REFPANEL"_temp" --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
+
         if [ ! -e merge1.bed ]
         then
-            ./plink --bfile reference_panel/$REFPANEL --exclude merge1-merge.missnp --make-bed --out reference_panel/$REFPANEL"_temp" >>run.log 2>>error.log
-            ./plink --bfile reference_panel/$REFPANEL"_temp" --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
-
-            if [ ! -e merge1.bed ]
-            then
-                echo "Check error.log for unforeseen errors"
-                exit 1
-            fi
+            echo "Check error.log for unforeseen errors"
+            exit 1
         fi
     fi
 fi
-    
 
-./plink --bfile merge1 -geno 0.999 --make-bed --out merge
+
+./plink --bfile merge1 -geno 0.9 --make-bed --out merge
 
 awk '{print $1}' merge.fam > merge1.pop
 awk '{ if( $1=="FAM001" ) $1=" "; print $1; }' merge1.pop > merge.pop

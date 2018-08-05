@@ -1,17 +1,14 @@
 #!/bin/bash
 
-###
-#      STEP 1
-#
-# Find the input vcf/ped file and convert it to me.ped
-#
-# Idea: Standardizing filename and file type for later processing in the pipeline
-###
+# Step 1: Input Sanitation
 
+# 1.1 
 REFPANEL=$1
 
-echo Finding and processing input file...
 
+
+# 1.2
+# vcf/ped in current dir -> me.ped
 input="$(ls | egrep -e ".vcf|.vcf.gz|.ped")"
 
 echo $input
@@ -28,83 +25,56 @@ else
 fi
 
 
-###
-#      STEP 2
-# Accept binary/multiple workflow pipeline
-#
-###
 
-echo
-echo
-echo Binary Ancestry Option is 1 
-echo Continental Ancestry Option is 2
-echo
-echo Which ancestry do you want to check
-
-$option=2
-
-echo 
-echo To view progress, run 'cat run.log' in the 
-echo same directory from a different terminal session
-
-####
-#       STEP 3
-#  - merge individual's genotype to reference panel
-#  - run admixture on merged bed with corresponding merged pop file
-#  - the generated Q file is analyzed by R script which generates the final ancestry results
-####
-
-# biallelic error
+# 1.3
+# me.ped -> me_binary.bed
 ./plink --file me --make-bed --out me_binary >> run.log 2>>error.log
+
+
+
+# Step 2: Merging Efficiently
+# me_binary.bed $REFPANEL.bed -> merge.bed
+
+# 2.1
 awk '{print $2;}' me_binary.bim | sort > me_binary.snps
 awk '{print $2;}' reference_panel/$REFPANEL".bim" | sort > ref.snps
+
+# 2.2
 comm -12 me_binary.snps ref.snps > merging.snps
 
+# 2.3
 ./plink --bfile reference_panel/$REFPANEL --bmerge me_binary --extract merging.snps -make-bed --out merge1 >>run.log 2>>error.log
 
-if [ ! -e merge1.bed ]
-then 
-    # merge missnp error
-    ./plink --bfile me_binary --exclude merge1-merge.missnp --make-bed --out me_final >>run.log 2>>error.log
-    ./plink --bfile reference_panel/$REFPANEL --bmerge me_final -make-bed --out merge1 >>run.log 2>>error.log
-    
-    if [ ! -e merge1.bed ]
-    then
-        ./plink --bfile reference_panel/$REFPANEL --exclude merge1-merge.missnp --make-bed --out reference_panel/$REFPANEL"_temp" >>run.log 2>>error.log
-        ./plink --bfile reference_panel/$REFPANEL"_temp" --bmerge me_final --make-bed --out merge1 >>run.log 2>>error.log
-
-        if [ ! -e merge1.bed ]
-        then
-            echo "Check error.log for unforeseen errors"
-            exit 1
-        fi
-    fi
-fi
+# 2.4
+./plink --bfile merge1 -geno 0.9 --make-bed --out merge >>run.log 2>>error.log
 
 
-./plink --bfile merge1 -geno 0.9 --make-bed --out merge
+# Step 3: Preparing requisite files
+# merge.bed -> merge.pop -> $pops
 
+# 3.1
 awk '{print $1}' merge.fam > merge1.pop
+
+# 3.2
 awk '{ if( $1=="FAM001" ) $1=" "; print $1; }' merge1.pop > merge.pop
 
-# In case some populations don't make it through the merge step, we can't ensure that
-# there will be the same number of populations as in the original hapmap
+# 3.3
 pops="$(cat merge.pop | sort | uniq | wc -l)"
-
 let pop=pops-1
 
+
+# Step 4: Admixture analysis and plotting
+
+# 4.1
 ./admixture -j5 --supervised merge.bed $pop >> run.log 2>>error.log >> run.log 2>>error.log
 
+# 4.2
 output="$(ls | egrep -e "$pop.Q")"
 
+# 4.3
+Rscript plots/plot.R $output 1>>error.log
 
-        Rscript plots/plot.R $output 1>>error.log
-        open ancestry.png
-    echo
-        #Rscript plots/plotBinary.R $output 1>>error.log
-        #open ancestry.png
-#fi
-
+# Review results and house keeping
+open ancestry.png
 echo
-
-rm -f reference_panel/$REFPANEL"_temp"*
+rm -f me_binary.snps ref.snps merging.snps

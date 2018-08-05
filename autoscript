@@ -1,23 +1,29 @@
-i=1
 j=$(pwd)
 for filename in $j/$1/*; do
-
+    basename "${filename}"
+    
+    # If a SNP set is not provided, then use all SNPs
+    # Otherwise filter out the SNP set
     if [ -z "$3" ]
         then
-            ./plink --23file $filename --recode --out me
-            ./plink --bfile $2 --make-bed --out reference_panel/temp_panel
+            ./plink --23file $filename --recode --out me >run.log 2>error.log
+            ./plink --bfile $2 --make-bed --out reference_panel/temp_panel >>run.log 2>>error.log
     else
-            ./plink --23file $filename --extract $3 --recode --out me
-            ./plink --bfile $2 --extract $3 --make-bed --out reference_panel/temp_panel
+            ./plink --23file $filename --extract $3 --recode --out me >run.log 2>error.log
+            ./plink --bfile $2 --extract $3 --make-bed --out reference_panel/temp_panel >>run.log 2>>error.log
     fi
-
+    
     ./ancestry temp_panel
     
 
     open ancestry.png
-    i=$((i+1))
+    echo 
+    echo "Press enter to start next run: "
     read input
+
+    # Remove old analysis files
     rm -f me*
 done
 
+# House keeping
 rm -f reference_panel/temp_panel*

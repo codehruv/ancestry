@@ -1,5 +1,10 @@
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
 # Step 1: Input
 args <- commandArgs(TRUE)
+#tbl <- read.table("merge.84.Q")
 tbl <- read.table(args[1])
 
 popsFam <- read.csv("merge.pop", sep="\n", header=F)
@@ -19,23 +24,31 @@ lbls <- lbls[!(lbls == " ")]
 final_table <- data.frame(slices, lbls)
 final_table <- final_table[final_table$slices > 0.00010, ]
 
-# 3.2 Plotting
-png(file="ancestry.png")
-pie(final_table[,1], labels = final_table[,2], main="Ancestry Chart")
-dev.off()
-
-
 # Later development
-if(FALSE) {
-pop2region <- read.table("pops2region.txt", sep=" ", header=F)
+pop2region <- read.table("reference_panel/pop2superpop.txt", sep="\t", header=F)
 names(pop2region) <- c("Pop", "Region")
 
 finalized_table <- merge(final_table, pop2region, by.x='lbls', by.y='Pop')
-
+finalized_table <- distinct(finalized_table)
 #finalized_table <- finalized_table[finalized_table$slices > 0.00010, ]
 
-print(finalized_table)
-print(final_table)
+# 3.2 Saving Info
+if(is.data.frame(finalized_table) && nrow(finalized_table)!=0) {
+    write.table(finalized_table, "ancestry.txt", sep="\t", quote=F, row.names=F)
+} else {
+    write.table(final_table, "ancestry.txt", sep="\t", quote=F, row.names=F)
 }
 
+if(FALSE) {
+print(finalized_table)
+print(final_table)
 
+par(new=TRUE)
+p <- pie(finalized_table[,2], labels=finalized_table[,3], radius = 0.5) 
+color_scheme <- c("EUROPE" = "blue", "MIDDLE_EAST" = "white", "OCEANIA" = "blue", "EAST_ASIA" = "yellow", "CENTRAL_SOUTH_ASIA" = "brown")
+p + scale_colour_manual(values = color_scheme)
+
+png(file="ancestrySP.png")
+sunburst(finalized_table)
+dev.off()
+}
